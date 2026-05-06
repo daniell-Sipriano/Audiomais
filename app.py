@@ -39,14 +39,13 @@ streaming  = False
 stop_event = threading.Event()
 status     = {}
 
+_active_ffmpeg_proc = [None]
+_ffmpeg_lock = threading.Lock()
+
 SAMPLE_RATE = 48000
 CHANNELS    = 2
 PACKET_SIZE = 960
 INTERVAL    = PACKET_SIZE / (SAMPLE_RATE * CHANNELS * 2)
-
-# ffmpeg proc ativo (para hot-swap de rádio/volume)
-_active_ffmpeg_proc = [None]
-_ffmpeg_lock = threading.Lock()
 
 # ── Config ────────────────────────────────────────────────────
 def load_config():
@@ -83,15 +82,15 @@ def ping_loop():
 threading.Thread(target=ping_loop, daemon=True).start()
 
 # ── Modo Rádio ────────────────────────────────────────────────
-def radio_stream(cfg_init, stop_ev):
-    rc   = cfg_init['radio']
+def radio_stream(cfg, stop_ev):
+    rc   = cfg['radio']
     ips  = rc['esp32_ips']
     dev  = rc['aplay_dev']
     period = int(SAMPLE_RATE * 0.005)
     buf    = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
 
     sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    pkt_q    = queue.Queue(maxsize=600)
+    pkt_q    = queue.Queue(maxsize=400)
     aplay_q  = queue.Queue(maxsize=400)
 
     for ip in ips:
@@ -101,14 +100,12 @@ def radio_stream(cfg_init, stop_ev):
 
     def ffmpeg_reader():
         while not stop_ev.is_set():
-            # re-lê config a cada restart para pegar nova URL e volume
             rc_now = load_config()['radio']
-            url    = rc_now['url']
-            vol    = rc_now.get('volume', 1.0)
+            url = rc_now['url']
+            vol = rc_now.get('volume', 1.0)
             proc = subprocess.Popen([
                 'ffmpeg', '-hide_banner', '-loglevel', 'warning',
-                '-reconnect', '1',
-                '-reconnect_streamed', '1',
+                '-reconnect', '1', '-reconnect_streamed', '1',
                 '-reconnect_delay_max', '5',
                 '-i', url,
                 '-af', f'volume={vol}',
@@ -129,9 +126,6 @@ def radio_stream(cfg_init, stop_ev):
                         leftover = leftover[PACKET_SIZE:]
             finally:
                 proc.terminate()
-                with _ffmpeg_lock:
-                    if _active_ffmpeg_proc[0] is proc:
-                        _active_ffmpeg_proc[0] = None
             if not stop_ev.is_set():
                 time.sleep(1)
 
@@ -170,11 +164,12 @@ def radio_stream(cfg_init, stop_ev):
         now = time.monotonic()
         if next_send is None:
             next_send = now
+
         wait = next_send - now
         if wait > 0.0001:
             time.sleep(wait - 0.0001)
         while time.monotonic() < next_send:
-            pass  # busy-wait último 0.1ms — elimina jitter do sleep
+            pass
         if wait < -0.05:
             next_send = time.monotonic()
 
@@ -286,9 +281,11 @@ def mesa_stream(cfg, stop_ev):
             if next_send is None:
                 next_send = now
             wait = next_send - now
-            if wait > 0:
-                time.sleep(wait)
-            elif wait < -0.1:
+            if wait > 0.0001:
+                time.sleep(wait - 0.0001)
+            while time.monotonic() < next_send:
+                pass
+            if wait < -0.05:
                 next_send = time.monotonic()
 
             sock_udp.sendto(pkt, (ip, 9999))
@@ -347,14 +344,6 @@ def api_stop():
     streaming = False
     return jsonify({'ok': True})
 
-@app.route('/api/status', methods=['GET'])
-def api_status():
-    return jsonify({
-        'streaming': streaming,
-        'mode': load_config().get('mode', 'radio'),
-        'destinations': list(status.values())
-    })
-
 @app.route('/api/reload_radio', methods=['POST'])
 def api_reload_radio():
     with _ffmpeg_lock:
@@ -362,6 +351,14 @@ def api_reload_radio():
     if proc and proc.poll() is None:
         proc.terminate()
     return jsonify({'ok': True})
+
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    return jsonify({
+        'streaming': streaming,
+        'mode': load_config().get('mode', 'radio'),
+        'destinations': list(status.values())
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)

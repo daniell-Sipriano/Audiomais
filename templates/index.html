@@ -20,9 +20,13 @@
   body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
 
   header {
-    background: var(--card); border-bottom: 1px solid var(--border);
-    padding: 14px 20px; display: flex; align-items: center;
-    justify-content: space-between; position: sticky; top: 0; z-index: 10;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
   }
   header h1 { font-size: 1.3rem; letter-spacing: 1px; color: var(--accent); }
   header .subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
@@ -48,11 +52,9 @@
 
   main { max-width: 700px; margin: 0 auto; padding: 20px; }
 
-  .tabs {
-    display: flex; gap: 4px; background: var(--card);
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 4px; margin-bottom: 20px;
-  }
+  .tabs { display: flex; gap: 4px; background: var(--card);
+          border: 1px solid var(--border); border-radius: 10px;
+          padding: 4px; margin-bottom: 20px; }
   .tab {
     flex: 1; padding: 10px; border: none; border-radius: 7px;
     background: transparent; color: var(--muted);
@@ -64,13 +66,11 @@
     background: var(--card); border: 1px solid var(--border);
     border-radius: 12px; padding: 18px; margin-bottom: 16px;
   }
-  .card h3 {
-    font-size: 0.85rem; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 14px;
-  }
+  .card h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase;
+             letter-spacing: 0.5px; margin-bottom: 14px; }
 
   label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; }
-  input[type=text], input[type=number], select {
+  input, select {
     width: 100%; padding: 9px 12px;
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 8px; color: var(--text); font-size: 0.9rem;
@@ -79,20 +79,21 @@
   input:focus, select:focus { border-color: var(--accent); }
   .field { margin-bottom: 14px; }
 
-  /* Volume slider */
-  input[type=range] {
-    -webkit-appearance: none; width: 100%; height: 6px;
-    background: var(--border); border-radius: 3px;
-    padding: 0; border: none; cursor: pointer; outline: none;
+  .volume-row { display: flex; align-items: center; gap: 10px; }
+  .volume-row input[type=range] {
+    flex: 1; padding: 0; height: 6px; accent-color: var(--accent);
+    background: var(--border); border: none; border-radius: 3px; cursor: pointer;
   }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 20px; height: 20px;
-    background: var(--accent); border-radius: 50%; cursor: pointer;
+  .volume-val { font-size: 0.9rem; font-weight: 700; color: var(--accent); min-width: 42px; text-align: right; }
+
+  .btn-swap {
+    width: 100%; padding: 10px; background: #162032; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 9px;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    margin-bottom: 12px; transition: opacity 0.2s; display: none;
   }
-  input[type=range]::-moz-range-thumb {
-    width: 20px; height: 20px; background: var(--accent);
-    border-radius: 50%; border: none; cursor: pointer;
-  }
+  .btn-swap:hover { opacity: 0.8; }
+  .btn-swap.visible { display: block; }
 
   .ip-list { display: flex; flex-direction: column; gap: 8px; }
   .ip-row  { display: flex; gap: 8px; align-items: center; }
@@ -103,21 +104,15 @@
     align-items: center; justify-content: center; flex-shrink: 0;
   }
   .btn-remove { background: #3b1414; color: var(--red); }
-  .btn-add {
-    background: #162032; color: var(--accent); width: auto;
-    padding: 7px 14px; font-size: 0.85rem; font-weight: 600;
-    border-radius: 7px; border: none; cursor: pointer;
-  }
+  .btn-add    { background: #162032; color: var(--accent); width: auto;
+                padding: 7px 14px; font-size: 0.85rem; font-weight: 600; border-radius: 7px; }
 
   .musician-row {
     display: grid; grid-template-columns: 1fr 60px 60px 1fr 34px;
     gap: 6px; align-items: center; margin-bottom: 8px;
   }
   .musician-row input { padding: 7px 9px; font-size: 0.82rem; }
-  .col-header {
-    display: grid; grid-template-columns: 1fr 60px 60px 1fr 34px;
-    gap: 6px; margin-bottom: 6px;
-  }
+  .col-header { display: grid; grid-template-columns: 1fr 60px 60px 1fr 34px; gap: 6px; margin-bottom: 6px; }
   .col-header span { font-size: 0.72rem; color: var(--muted); text-align: center; }
   .col-header span:first-child { text-align: left; }
   .col-header span:nth-child(4) { text-align: left; }
@@ -140,13 +135,6 @@
     cursor: pointer; margin-top: 4px; transition: opacity 0.2s;
   }
   .btn-save:hover { opacity: 0.85; }
-
-  .btn-trocar {
-    width: auto; padding: 9px 16px; background: #ca8a04; color: #fff;
-    border: none; border-radius: 9px; font-size: 0.9rem; font-weight: 600;
-    cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: opacity 0.2s;
-  }
-  .btn-trocar:hover { opacity: 0.85; }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -194,26 +182,24 @@
 
       <div class="field">
         <label>Rádio</label>
-        <select id="radio-select" onchange="selectRadioFromDropdown(this.value)"></select>
+        <select id="radio-select" onchange="onRadioSelect()"></select>
       </div>
 
-      <div class="field">
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <div style="flex:1">
-            <label>URL</label>
-            <input type="text" id="radio-url" placeholder="http://...">
-          </div>
-          <button id="btn-trocar" class="btn-trocar" onclick="trocarRadio()" style="display:none">
-            Trocar rádio
-          </button>
-        </div>
+      <div class="field" id="field-manual-url" style="display:none">
+        <label>URL da rádio</label>
+        <input type="text" id="radio-url" placeholder="http://...">
       </div>
 
       <div class="field">
         <label>Volume — <span id="vol-pct">100%</span></label>
-        <input type="range" id="radio-vol" min="0" max="200" value="100"
-               oninput="document.getElementById('vol-pct').textContent=this.value+'%'">
+        <div class="volume-row">
+          <input type="range" id="radio-vol" min="0" max="2" step="0.05" value="1"
+                 oninput="updateVolDisplay()">
+          <span class="volume-val" id="vol-val">100%</span>
+        </div>
       </div>
+
+      <button class="btn-swap" id="btn-swap" onclick="swapRadio()">⟳ Trocar rádio sem parar</button>
 
       <div class="field">
         <label>Dispositivo de áudio local (aplay)</label>
@@ -232,17 +218,17 @@
     </div>
 
     <div class="card">
-      <h3>+ Adicionar rádio personalizada</h3>
-      <div id="custom-radios-list"></div>
+      <h3>Adicionar rádio personalizada</h3>
       <div class="field">
         <label>Nome</label>
-        <input type="text" id="new-radio-name" placeholder="Ex: Rádio Globo Rio">
+        <input type="text" id="new-radio-name" placeholder="Ex: Minha Rádio">
       </div>
       <div class="field">
-        <label>URL do stream</label>
+        <label>URL</label>
         <input type="text" id="new-radio-url" placeholder="http://...">
       </div>
-      <button class="btn-save" onclick="addCustomRadio()">+ Adicionar à lista</button>
+      <button class="btn-save" onclick="addCustomRadio()">Salvar rádio</button>
+      <div id="custom-radio-list" style="margin-top:14px"></div>
     </div>
   </div>
 
@@ -277,123 +263,156 @@
 <script>
 let currentMode = 'radio';
 let cfg = {};
+let isStreaming = false;
 
 const PRESET_RADIOS = [
-  { name: 'Antena 1 Rio — 103.7 FM',        url: 'http://a1rj.streams.com.br:7801/stream' },
-  { name: 'Máquina do Tempo MPB',            url: 'http://servidor28.brlogic.com:8032/live' },
-  { name: 'Máquina do Tempo Internacional',  url: 'http://servidor28.brlogic.com:8212/live' },
-  { name: 'Flashback FM',                    url: 'http://hd.matutos.com.br:8008/;stream.mp3' },
+  { group: 'Rio de Janeiro',  name: 'Antena 1 Rio — 103.7 FM',           url: 'http://a1rj.streams.com.br:7801/stream' },
+  { group: 'Clássicos / MPB', name: 'Máquina do Tempo — MPB',            url: 'http://servidor28.brlogic.com:8032/live' },
+  { group: 'Clássicos / MPB', name: 'Máquina do Tempo — Internacional',  url: 'http://servidor28.brlogic.com:8212/live' },
+  { group: 'Clássicos / MPB', name: 'Flashback FM',                      url: 'http://hd.matutos.com.br:8008/;stream.mp3' },
 ];
+
+// ── Dropdown ──────────────────────────────────────────────────
+function buildRadioSelect() {
+  const sel = document.getElementById('radio-select');
+  sel.innerHTML = '';
+
+  const groups = {};
+  PRESET_RADIOS.forEach(r => {
+    if (!groups[r.group]) groups[r.group] = [];
+    groups[r.group].push(r);
+  });
+  Object.keys(groups).forEach(g => {
+    const og = document.createElement('optgroup');
+    og.label = g;
+    groups[g].forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.url;
+      opt.textContent = r.name;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+
+  const customs = cfg.radio.custom_radios || [];
+  if (customs.length) {
+    const og = document.createElement('optgroup');
+    og.label = 'Minhas rádios';
+    customs.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.url;
+      opt.textContent = r.name;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  }
+
+  const optManual = document.createElement('option');
+  optManual.value = '__manual__';
+  optManual.textContent = '✏️ Digitar URL manualmente...';
+  sel.appendChild(optManual);
+
+  const currentUrl = cfg.radio.url || '';
+  let found = false;
+  for (const opt of sel.options) {
+    if (opt.value === currentUrl) { sel.value = currentUrl; found = true; break; }
+  }
+  if (!found) {
+    sel.value = '__manual__';
+    document.getElementById('radio-url').value = currentUrl;
+    document.getElementById('field-manual-url').style.display = 'block';
+  }
+}
+
+function onRadioSelect() {
+  const val = document.getElementById('radio-select').value;
+  if (val === '__manual__') {
+    document.getElementById('field-manual-url').style.display = 'block';
+  } else {
+    document.getElementById('field-manual-url').style.display = 'none';
+    cfg.radio.url = val;
+  }
+}
+
+// ── Volume ────────────────────────────────────────────────────
+function updateVolDisplay() {
+  const v = parseFloat(document.getElementById('radio-vol').value);
+  const pct = Math.round(v * 100) + '%';
+  document.getElementById('vol-pct').textContent = pct;
+  document.getElementById('vol-val').textContent  = pct;
+}
+
+// ── Trocar rádio sem parar ────────────────────────────────────
+async function swapRadio() {
+  await saveConfig();
+  const r = await fetch('/api/reload_radio', { method: 'POST' });
+  const d = await r.json();
+  toast(d.ok ? 'Trocando rádio...' : 'Erro ao trocar rádio');
+}
+
+// ── Rádio personalizada ───────────────────────────────────────
+function addCustomRadio() {
+  const name = document.getElementById('new-radio-name').value.trim();
+  const url  = document.getElementById('new-radio-url').value.trim();
+  if (!name || !url) { toast('Preencha nome e URL'); return; }
+  if (!cfg.radio.custom_radios) cfg.radio.custom_radios = [];
+  cfg.radio.custom_radios.push({ name, url });
+  document.getElementById('new-radio-name').value = '';
+  document.getElementById('new-radio-url').value  = '';
+  renderCustomRadios();
+  buildRadioSelect();
+  saveConfig();
+  toast('Rádio salva!');
+}
+
+function removeCustomRadio(i) {
+  cfg.radio.custom_radios.splice(i, 1);
+  renderCustomRadios();
+  buildRadioSelect();
+  saveConfig();
+}
+
+function renderCustomRadios() {
+  const list = document.getElementById('custom-radio-list');
+  const customs = cfg.radio.custom_radios || [];
+  if (!customs.length) { list.innerHTML = ''; return; }
+  list.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px">Salvas:</div>';
+  customs.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'ip-row';
+    row.style.marginBottom = '8px';
+    row.innerHTML = `
+      <div style="flex:1;font-size:0.85rem">
+        <div style="font-weight:600">${r.name}</div>
+        <div style="color:var(--muted);font-size:0.75rem;word-break:break-all">${r.url}</div>
+      </div>
+      <button class="btn-icon btn-remove" onclick="removeCustomRadio(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
 
 // ── Carregar config ───────────────────────────────────────────
 async function loadConfig() {
   const r = await fetch('/api/config');
   cfg = await r.json();
-  if (!cfg.radio.custom_radios) cfg.radio.custom_radios = [];
-  if (cfg.radio.volume === undefined) cfg.radio.volume = 1.0;
   currentMode = cfg.mode;
+  if (!cfg.radio.custom_radios) cfg.radio.custom_radios = [];
   renderAll();
   switchTab(currentMode);
 }
 
 function renderAll() {
-  const volPct = Math.round((cfg.radio.volume || 1.0) * 100);
-  document.getElementById('radio-url').value           = cfg.radio.url;
-  document.getElementById('radio-aplay').value         = cfg.radio.aplay_dev;
-  document.getElementById('radio-buf').value           = cfg.radio.aplay_buf_ms;
-  document.getElementById('radio-vol').value           = volPct;
-  document.getElementById('vol-pct').textContent       = volPct + '%';
-  renderDropdown();
-  renderCustomList();
+  buildRadioSelect();
+  document.getElementById('radio-aplay').value = cfg.radio.aplay_dev;
+  document.getElementById('radio-buf').value   = cfg.radio.aplay_buf_ms;
+  const vol = cfg.radio.volume !== undefined ? cfg.radio.volume : 1.0;
+  document.getElementById('radio-vol').value = vol;
+  updateVolDisplay();
   renderIPs();
-
+  renderCustomRadios();
   document.getElementById('mesa-alsa').value     = cfg.mesa.alsa_device;
   document.getElementById('mesa-channels').value = cfg.mesa.total_channels;
   renderMusicians();
-}
-
-// ── Dropdown de rádios ────────────────────────────────────────
-function renderDropdown() {
-  const sel = document.getElementById('radio-select');
-  const currentUrl = document.getElementById('radio-url').value;
-  const custom = cfg.radio.custom_radios || [];
-  sel.innerHTML = '';
-
-  const presetGroup = document.createElement('optgroup');
-  presetGroup.label = 'Rádios disponíveis';
-  PRESET_RADIOS.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r.url;
-    opt.textContent = r.name;
-    if (r.url === currentUrl) opt.selected = true;
-    presetGroup.appendChild(opt);
-  });
-  sel.appendChild(presetGroup);
-
-  if (custom.length) {
-    const customGroup = document.createElement('optgroup');
-    customGroup.label = 'Personalizadas';
-    custom.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.url;
-      opt.textContent = r.name;
-      if (r.url === currentUrl) opt.selected = true;
-      customGroup.appendChild(opt);
-    });
-    sel.appendChild(customGroup);
-  }
-}
-
-function selectRadioFromDropdown(url) {
-  document.getElementById('radio-url').value = url;
-}
-
-// ── Lista de rádios personalizadas ────────────────────────────
-function renderCustomList() {
-  const list = document.getElementById('custom-radios-list');
-  const custom = cfg.radio.custom_radios || [];
-  if (!custom.length) { list.innerHTML = ''; return; }
-  list.innerHTML = '';
-  custom.forEach((r, i) => {
-    const row = document.createElement('div');
-    row.className = 'ip-row';
-    row.style.marginBottom = '8px';
-    row.innerHTML = `
-      <span style="flex:1;font-size:0.85rem;padding:0 4px">${r.name}</span>
-      <button class="btn-icon btn-remove" onclick="removeCustomRadio(${i})">✕</button>`;
-    list.appendChild(row);
-  });
-  // separador visual
-  const sep = document.createElement('hr');
-  sep.style.cssText = 'border:none;border-top:1px solid var(--border);margin:10px 0 14px';
-  list.appendChild(sep);
-}
-
-function addCustomRadio() {
-  const name = document.getElementById('new-radio-name').value.trim();
-  const url  = document.getElementById('new-radio-url').value.trim();
-  if (!name || !url) { toast('Preencha nome e URL'); return; }
-  cfg.radio.custom_radios.push({ name, url });
-  document.getElementById('new-radio-name').value = '';
-  document.getElementById('new-radio-url').value  = '';
-  renderDropdown();
-  renderCustomList();
-  saveConfig();
-  toast('Rádio adicionada!');
-}
-
-function removeCustomRadio(i) {
-  cfg.radio.custom_radios.splice(i, 1);
-  renderDropdown();
-  renderCustomList();
-  saveConfig();
-}
-
-// ── Trocar rádio sem parar ────────────────────────────────────
-async function trocarRadio() {
-  await saveConfig();
-  await fetch('/api/reload_radio', { method: 'POST' });
-  toast('Trocando rádio...');
 }
 
 // ── IPs ───────────────────────────────────────────────────────
@@ -454,10 +473,13 @@ function switchTab(mode) {
 
 // ── Salvar ────────────────────────────────────────────────────
 async function saveConfig() {
-  cfg.radio.url           = document.getElementById('radio-url').value;
+  const selVal = document.getElementById('radio-select').value;
+  cfg.radio.url = (selVal === '__manual__')
+    ? document.getElementById('radio-url').value
+    : selVal;
   cfg.radio.aplay_dev     = document.getElementById('radio-aplay').value;
   cfg.radio.aplay_buf_ms  = +document.getElementById('radio-buf').value;
-  cfg.radio.volume        = +document.getElementById('radio-vol').value / 100;
+  cfg.radio.volume        = parseFloat(document.getElementById('radio-vol').value);
   cfg.mesa.alsa_device    = document.getElementById('mesa-alsa').value;
   cfg.mesa.total_channels = +document.getElementById('mesa-channels').value;
   cfg.mode = currentMode;
@@ -471,10 +493,9 @@ async function saveConfig() {
 
 // ── Stream ────────────────────────────────────────────────────
 async function toggleStream() {
-  const streaming = document.getElementById('badge').classList.contains('on');
-  const url = streaming ? '/api/stop' : '/api/start';
+  const url = isStreaming ? '/api/stop' : '/api/start';
   await saveConfig();
-  const r = await fetch(url, {method: 'POST'});
+  const r = await fetch(url, { method: 'POST' });
   const d = await r.json();
   if (!d.ok) toast(d.msg);
   updateStatus();
@@ -483,23 +504,23 @@ async function toggleStream() {
 // ── Status ────────────────────────────────────────────────────
 function updateStatus() {
   fetch('/api/status').then(r => r.json()).then(data => {
-    const badge = document.getElementById('badge');
-    const btn   = document.getElementById('btn-main');
-    const txt   = document.getElementById('badge-txt');
-    const btnT  = document.getElementById('btn-trocar');
-
+    isStreaming = data.streaming;
+    const badge   = document.getElementById('badge');
+    const btn     = document.getElementById('btn-main');
+    const txt     = document.getElementById('badge-txt');
+    const btnSwap = document.getElementById('btn-swap');
     if (data.streaming) {
       badge.className = 'badge on';
-      txt.textContent  = 'Transmitindo';
-      btn.className    = 'btn-stream stop';
-      btn.textContent  = 'Parar';
-      btnT.style.display = (data.mode === 'radio') ? '' : 'none';
+      txt.textContent = 'Transmitindo';
+      btn.className   = 'btn-stream stop';
+      btn.textContent = 'Parar';
+      if (data.mode === 'radio') btnSwap.classList.add('visible');
     } else {
       badge.className = 'badge off';
-      txt.textContent  = 'Parado';
-      btn.className    = 'btn-stream start';
-      btn.textContent  = 'Iniciar';
-      btnT.style.display = 'none';
+      txt.textContent = 'Parado';
+      btn.className   = 'btn-stream start';
+      btn.textContent = 'Iniciar';
+      btnSwap.classList.remove('visible');
     }
     renderStatusCards(data.destinations || []);
   });
@@ -515,14 +536,13 @@ function renderStatusCards(dests) {
   dests.forEach(d => {
     const card = document.createElement('div');
     card.className = 'status-card ' + (d.online ? 'online' : 'offline');
-    const rate = d.pkt_rate || 0;
-    const dot  = d.online
+    const dot = d.online
       ? '<span style="color:var(--green)">● Online</span>'
       : '<span style="color:var(--red)">● Offline</span>';
     card.innerHTML = `
       <div class="s-name">${d.name || d.ip || '?'}</div>
       <div class="s-ip">${d.ip || ''}</div>
-      <div class="s-rate">${rate}</div>
+      <div class="s-rate">${d.pkt_rate || 0}</div>
       <div class="s-label">pkt/s</div>
       <div style="font-size:0.72rem;margin-top:6px">${dot}</div>`;
     grid.appendChild(card);
@@ -537,7 +557,6 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ── Init ──────────────────────────────────────────────────────
 loadConfig();
 updateStatus();
 setInterval(updateStatus, 3000);
