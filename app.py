@@ -1,0 +1,339 @@
+from flask import Flask, render_template, jsonify, request
+import subprocess, socket, threading, queue, time, json, os
+
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+
+app = Flask(__name__)
+
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
+
+DEFAULT_CONFIG = {
+    "mode": "radio",
+    "radio": {
+        "url": "http://a1rj.streams.com.br:7801/stream",
+        "esp32_ips": ["10.30.30.199"],
+        "aplay_dev": "plughw:1,0",
+        "aplay_buf_ms": 25
+    },
+    "mesa": {
+        "alsa_device": "hw:1,0",
+        "total_channels": 64,
+        "musicians": [
+            {"name": "Baterista",   "ch_l": 34, "ch_r": 35, "ip": "10.30.30.10"},
+            {"name": "Baixista",    "ch_l": 36, "ch_r": 37, "ip": "10.30.30.11"},
+            {"name": "Guitarrista", "ch_l": 38, "ch_r": 39, "ip": "10.30.30.12"},
+            {"name": "Vocalista",   "ch_l": 40, "ch_r": 41, "ip": "10.30.30.13"},
+            {"name": "Tecladista",  "ch_l": 42, "ch_r": 43, "ip": "10.30.30.14"}
+        ]
+    }
+}
+
+# ── Estado global ─────────────────────────────────────────────
+streaming  = False
+stop_event = threading.Event()
+status     = {}   # ip → {name, pkt_rate, pkts_total, online}
+
+SAMPLE_RATE = 48000
+CHANNELS    = 2
+PACKET_SIZE = 960
+INTERVAL    = PACKET_SIZE / (SAMPLE_RATE * CHANNELS * 2)
+
+# ── Config ────────────────────────────────────────────────────
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return json.loads(json.dumps(DEFAULT_CONFIG))
+
+def save_config(cfg):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+# ── Ping ESP32s em background ─────────────────────────────────
+def ping_loop():
+    while True:
+        cfg = load_config()
+        ips = set()
+        if cfg['mode'] == 'radio':
+            ips = set(cfg['radio']['esp32_ips'])
+        else:
+            ips = set(m['ip'] for m in cfg['mesa']['musicians'])
+        for ip in ips:
+            r = subprocess.run(['ping', '-c', '1', '-W', '1', ip],
+                               capture_output=True)
+            if ip not in status:
+                status[ip] = {'name': ip, 'pkt_rate': 0,
+                              'pkts_total': 0, 'online': False}
+            status[ip]['online'] = (r.returncode == 0)
+        time.sleep(5)
+
+threading.Thread(target=ping_loop, daemon=True).start()
+
+# ── Modo Rádio ────────────────────────────────────────────────
+def radio_stream(cfg, stop_ev):
+    rc   = cfg['radio']
+    url  = rc['url']
+    ips  = rc['esp32_ips']
+    dev  = rc['aplay_dev']
+    period = int(SAMPLE_RATE * 0.005)
+    buf    = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
+
+    sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    pkt_q    = queue.Queue(maxsize=400)
+    aplay_q  = queue.Queue(maxsize=400)
+
+    for ip in ips:
+        if ip not in status:
+            status[ip] = {'name': ip, 'pkt_rate': 0,
+                          'pkts_total': 0, 'online': False}
+
+    def ffmpeg_reader():
+        while not stop_ev.is_set():
+            proc = subprocess.Popen([
+                'ffmpeg', '-hide_banner', '-loglevel', 'warning',
+                '-i', url,
+                '-ar', str(SAMPLE_RATE), '-ac', str(CHANNELS),
+                '-f', 's16le', '-'
+            ], stdout=subprocess.PIPE)
+            leftover = b''
+            try:
+                while not stop_ev.is_set():
+                    chunk = proc.stdout.read(4096)
+                    if not chunk:
+                        break
+                    leftover += chunk
+                    while len(leftover) >= PACKET_SIZE:
+                        pkt_q.put(leftover[:PACKET_SIZE])
+                        leftover = leftover[PACKET_SIZE:]
+            finally:
+                proc.terminate()
+            if not stop_ev.is_set():
+                time.sleep(3)
+
+    def aplay_worker():
+        proc = subprocess.Popen([
+            'aplay', '-D', dev, '-t', 'raw', '-f', 'S16_LE',
+            '-r', str(SAMPLE_RATE), '-c', str(CHANNELS),
+            f'--period-size={period}', f'--buffer-size={buf}'
+        ], stdin=subprocess.PIPE)
+        while not stop_ev.is_set():
+            try:
+                data = aplay_q.get(timeout=1)
+            except queue.Empty:
+                continue
+            if data is None:
+                break
+            try:
+                proc.stdin.write(data)
+            except Exception:
+                break
+        proc.terminate()
+
+    threading.Thread(target=ffmpeg_reader, daemon=True).start()
+    threading.Thread(target=aplay_worker,  daemon=True).start()
+
+    next_send   = None
+    counts      = {ip: 0 for ip in ips}
+    last_update = time.monotonic()
+
+    while not stop_ev.is_set():
+        try:
+            pkt = pkt_q.get(timeout=0.5)
+        except queue.Empty:
+            continue
+
+        now = time.monotonic()
+        if next_send is None:
+            next_send = now
+        wait = next_send - now
+        if wait > 0:
+            time.sleep(wait)
+        elif wait < -0.1:
+            next_send = time.monotonic()
+
+        for ip in ips:
+            sock_udp.sendto(pkt, (ip, 9999))
+            counts[ip] = counts.get(ip, 0) + 1
+
+        next_send += INTERVAL
+
+        try:
+            aplay_q.put_nowait(pkt)
+        except queue.Full:
+            pass
+
+        elapsed = time.monotonic() - last_update
+        if elapsed >= 1.0:
+            for ip in ips:
+                if ip not in status:
+                    status[ip] = {'name': ip, 'pkts_total': 0, 'online': False}
+                status[ip]['pkt_rate']   = int(counts[ip] / elapsed)
+                status[ip]['pkts_total'] += counts[ip]
+                counts[ip] = 0
+            last_update = time.monotonic()
+
+    aplay_q.put(None)
+    sock_udp.close()
+
+# ── Modo Mesa ─────────────────────────────────────────────────
+def mesa_stream(cfg, stop_ev):
+    if not HAS_NUMPY:
+        print('ERRO: numpy não instalado. Execute: pip3 install numpy')
+        return
+
+    mc       = cfg['mesa']
+    alsa_dev = mc['alsa_device']
+    total_ch = mc['total_channels']
+    musicians = mc['musicians']
+
+    PACKET_FRAMES = 240
+    FRAME_BYTES   = total_ch * 2
+    READ_BYTES    = PACKET_FRAMES * 8 * FRAME_BYTES
+    interval      = PACKET_FRAMES / SAMPLE_RATE
+
+    sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    qs = {m['ip']: queue.Queue(maxsize=400) for m in musicians}
+
+    for m in musicians:
+        ip = m['ip']
+        if ip not in status:
+            status[ip] = {'pkts_total': 0, 'online': False}
+        status[ip]['name']     = m['name']
+        status[ip]['pkt_rate'] = 0
+
+    def capture_and_split():
+        while not stop_ev.is_set():
+            proc = subprocess.Popen([
+                'ffmpeg', '-hide_banner', '-loglevel', 'warning',
+                '-f', 'alsa',
+                '-channels', str(total_ch),
+                '-sample_rate', str(SAMPLE_RATE),
+                '-i', alsa_dev,
+                '-f', 's16le', '-'
+            ], stdout=subprocess.PIPE)
+            leftover = b''
+            try:
+                while not stop_ev.is_set():
+                    chunk = proc.stdout.read(READ_BYTES)
+                    if not chunk:
+                        break
+                    leftover += chunk
+                    n_pkts = (len(leftover) // FRAME_BYTES) // PACKET_FRAMES
+                    if n_pkts == 0:
+                        continue
+                    use   = n_pkts * PACKET_FRAMES * FRAME_BYTES
+                    data  = leftover[:use]
+                    leftover = leftover[use:]
+                    frames = np.frombuffer(data, dtype=np.int16).reshape(-1, total_ch)
+                    for p in range(n_pkts):
+                        s, e = p * PACKET_FRAMES, (p + 1) * PACKET_FRAMES
+                        pf = frames[s:e]
+                        for m in musicians:
+                            st = pf[:, [m['ch_l'], m['ch_r']]]
+                            try:
+                                qs[m['ip']].put_nowait(st.tobytes())
+                            except queue.Full:
+                                pass
+            except Exception as ex:
+                print(f'Captura: {ex}')
+            finally:
+                proc.terminate()
+            if not stop_ev.is_set():
+                time.sleep(3)
+
+    def udp_sender(musician):
+        ip   = musician['ip']
+        q    = qs[ip]
+        next_send  = None
+        count      = 0
+        last_update = time.monotonic()
+
+        while not stop_ev.is_set():
+            try:
+                pkt = q.get(timeout=0.5)
+            except queue.Empty:
+                next_send = None
+                continue
+
+            now = time.monotonic()
+            if next_send is None:
+                next_send = now
+            wait = next_send - now
+            if wait > 0:
+                time.sleep(wait)
+            elif wait < -0.1:
+                next_send = time.monotonic()
+
+            sock_udp.sendto(pkt, (ip, 9999))
+            count += 1
+            next_send += interval
+
+            elapsed = time.monotonic() - last_update
+            if elapsed >= 1.0:
+                if ip in status:
+                    status[ip]['pkt_rate']   = int(count / elapsed)
+                    status[ip]['pkts_total'] += count
+                count = 0
+                last_update = time.monotonic()
+
+    threading.Thread(target=capture_and_split, daemon=True).start()
+    for m in musicians:
+        threading.Thread(target=udp_sender, args=(m,), daemon=True).start()
+
+    while not stop_ev.is_set():
+        time.sleep(0.5)
+    sock_udp.close()
+
+# ── Rotas Flask ───────────────────────────────────────────────
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/config', methods=['GET'])
+def api_get_config():
+    return jsonify(load_config())
+
+@app.route('/api/config', methods=['POST'])
+def api_set_config():
+    save_config(request.json)
+    return jsonify({'ok': True})
+
+@app.route('/api/start', methods=['POST'])
+def api_start():
+    global streaming, stop_event, status
+    if streaming:
+        return jsonify({'ok': False, 'msg': 'Já está rodando'})
+    cfg        = load_config()
+    status     = {}
+    stop_event = threading.Event()
+    target     = radio_stream if cfg['mode'] == 'radio' else mesa_stream
+    threading.Thread(target=target, args=(cfg, stop_event), daemon=True).start()
+    streaming  = True
+    return jsonify({'ok': True})
+
+@app.route('/api/stop', methods=['POST'])
+def api_stop():
+    global streaming
+    if not streaming:
+        return jsonify({'ok': False, 'msg': 'Não está rodando'})
+    stop_event.set()
+    streaming = False
+    return jsonify({'ok': True})
+
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    return jsonify({
+        'streaming': streaming,
+        'mode': load_config().get('mode', 'radio'),
+        'destinations': list(status.values())
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=False)

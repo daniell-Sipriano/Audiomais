@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audiomais</title>
+<style>
+  :root {
+    --bg:      #0f1117;
+    --card:    #1a1d27;
+    --border:  #2a2d3a;
+    --accent:  #4f8ef7;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #eab308;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
+
+  /* Header */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 1.3rem; letter-spacing: 1px; color: var(--accent); }
+  header .subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+  .btn-stream {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-stream:hover { opacity: 0.85; }
+  .btn-stream.start { background: var(--green); color: #fff; }
+  .btn-stream.stop  { background: var(--red);   color: #fff; }
+
+  /* Status badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .badge.on  { background: #16532a; color: var(--green); }
+  .badge.off { background: #3b1414; color: var(--red); }
+  .badge.on  .dot { background: var(--green); animation: pulse 1.5s infinite; }
+  .badge.off .dot { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main { max-width: 700px; margin: 0 auto; padding: 20px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--card);
+          border: 1px solid var(--border); border-radius: 10px;
+          padding: 4px; margin-bottom: 20px; }
+  .tab {
+    flex: 1; padding: 10px; border: none; border-radius: 7px;
+    background: transparent; color: var(--muted);
+    font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase;
+             letter-spacing: 0.5px; margin-bottom: 14px; }
+
+  /* Form elements */
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; }
+  input, select {
+    width: 100%; padding: 9px 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .field { margin-bottom: 14px; }
+
+  /* IP list */
+  .ip-list { display: flex; flex-direction: column; gap: 8px; }
+  .ip-row  { display: flex; gap: 8px; align-items: center; }
+  .ip-row input { flex: 1; }
+  .btn-icon {
+    width: 34px; height: 34px; border: none; border-radius: 7px;
+    cursor: pointer; font-size: 1.1rem; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .btn-remove { background: #3b1414; color: var(--red); }
+  .btn-add    { background: #162032; color: var(--accent); width: auto;
+                padding: 7px 14px; font-size: 0.85rem; font-weight: 600; border-radius: 7px; }
+
+  /* Musician table */
+  .musician-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 1fr 34px;
+    gap: 6px; align-items: center; margin-bottom: 8px;
+  }
+  .musician-row input { padding: 7px 9px; font-size: 0.82rem; }
+  .col-header {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 1fr 34px;
+    gap: 6px; margin-bottom: 6px;
+  }
+  .col-header span { font-size: 0.72rem; color: var(--muted); text-align: center; }
+  .col-header span:first-child { text-align: left; }
+  .col-header span:nth-child(4) { text-align: left; }
+
+  /* Status cards */
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .status-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; text-align: center;
+  }
+  .status-card .s-name  { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+  .status-card .s-ip    { font-size: 0.7rem; color: var(--muted); margin-bottom: 8px; }
+  .status-card .s-rate  { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .status-card .s-label { font-size: 0.68rem; color: var(--muted); }
+  .status-card.online   { border-color: #16532a; }
+  .status-card.offline  { border-color: #3b1414; opacity: 0.6; }
+
+  /* Save button */
+  .btn-save {
+    width: 100%; padding: 11px; background: var(--accent); color: #fff;
+    border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; margin-top: 4px; transition: opacity 0.2s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: var(--text); padding: 10px 20px;
+    border-radius: 8px; font-size: 0.85rem; border: 1px solid var(--border);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🎧 AUDIOMAIS</h1>
+    <div class="subtitle">Sistema de retorno in-ear sem fio</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="badge off" id="badge"><span class="dot"></span><span id="badge-txt">Parado</span></span>
+    <button class="btn-stream start" id="btn-main" onclick="toggleStream()">Iniciar</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Status -->
+  <div class="card">
+    <h3>Status dos receptores</h3>
+    <div class="status-grid" id="status-grid">
+      <div style="color:var(--muted);font-size:0.85rem">Nenhum receptor ativo.</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-radio" onclick="switchTab('radio')">📻 Rádio / Internet</button>
+    <button class="tab"        id="tab-mesa"  onclick="switchTab('mesa')">🎛️ Mesa de Som</button>
+  </div>
+
+  <!-- Painel Rádio -->
+  <div class="panel active" id="panel-radio">
+    <div class="card">
+      <h3>Configuração — Modo Rádio</h3>
+      <div class="field">
+        <label>URL da rádio</label>
+        <input type="text" id="radio-url" placeholder="http://...">
+      </div>
+      <div class="field">
+        <label>Dispositivo de áudio local (aplay)</label>
+        <input type="text" id="radio-aplay" placeholder="plughw:1,0">
+      </div>
+      <div class="field">
+        <label>Buffer local (ms) — sincronismo Pi ↔ ESP32</label>
+        <input type="number" id="radio-buf" min="5" max="200" placeholder="25">
+      </div>
+      <div class="field">
+        <label>IPs dos ESP32s</label>
+        <div class="ip-list" id="ip-list"></div>
+        <button class="btn-add" onclick="addIP()" style="margin-top:8px">+ Adicionar ESP32</button>
+      </div>
+      <button class="btn-save" onclick="saveConfig()">Salvar configuração</button>
+    </div>
+  </div>
+
+  <!-- Painel Mesa -->
+  <div class="panel" id="panel-mesa">
+    <div class="card">
+      <h3>Configuração — Modo Mesa</h3>
+      <div class="field">
+        <label>Dispositivo ALSA (USB da mesa)</label>
+        <input type="text" id="mesa-alsa" placeholder="hw:1,0">
+      </div>
+      <div class="field">
+        <label>Total de canais USB da mesa</label>
+        <input type="number" id="mesa-channels" min="2" max="128" placeholder="64">
+      </div>
+      <div class="field">
+        <label>Músicos</label>
+        <div class="col-header">
+          <span>Nome</span><span>Ch L</span><span>Ch R</span><span>IP ESP32</span><span></span>
+        </div>
+        <div id="musicians-list"></div>
+        <button class="btn-add" onclick="addMusician()" style="margin-top:8px">+ Adicionar músico</button>
+      </div>
+      <button class="btn-save" onclick="saveConfig()">Salvar configuração</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentMode = 'radio';
+let cfg = {};
+
+// ── Carregar config ───────────────────────────────────────────
+async function loadConfig() {
+  const r = await fetch('/api/config');
+  cfg = await r.json();
+  currentMode = cfg.mode;
+  renderAll();
+  switchTab(currentMode);
+}
+
+function renderAll() {
+  // Radio
+  document.getElementById('radio-url').value   = cfg.radio.url;
+  document.getElementById('radio-aplay').value = cfg.radio.aplay_dev;
+  document.getElementById('radio-buf').value   = cfg.radio.aplay_buf_ms;
+  renderIPs();
+
+  // Mesa
+  document.getElementById('mesa-alsa').value     = cfg.mesa.alsa_device;
+  document.getElementById('mesa-channels').value = cfg.mesa.total_channels;
+  renderMusicians();
+}
+
+// ── IPs ───────────────────────────────────────────────────────
+function renderIPs() {
+  const list = document.getElementById('ip-list');
+  list.innerHTML = '';
+  (cfg.radio.esp32_ips || []).forEach((ip, i) => {
+    const row = document.createElement('div');
+    row.className = 'ip-row';
+    row.innerHTML = `
+      <input type="text" value="${ip}" oninput="cfg.radio.esp32_ips[${i}]=this.value" placeholder="10.30.30.x">
+      <button class="btn-icon btn-remove" onclick="removeIP(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+function addIP() {
+  cfg.radio.esp32_ips.push('10.30.30.');
+  renderIPs();
+}
+function removeIP(i) {
+  cfg.radio.esp32_ips.splice(i, 1);
+  renderIPs();
+}
+
+// ── Músicos ───────────────────────────────────────────────────
+function renderMusicians() {
+  const list = document.getElementById('musicians-list');
+  list.innerHTML = '';
+  (cfg.mesa.musicians || []).forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'musician-row';
+    row.innerHTML = `
+      <input type="text"   value="${m.name}"  placeholder="Nome"
+             oninput="cfg.mesa.musicians[${i}].name=this.value">
+      <input type="number" value="${m.ch_l+1}" min="1" max="128"
+             oninput="cfg.mesa.musicians[${i}].ch_l=+this.value-1">
+      <input type="number" value="${m.ch_r+1}" min="1" max="128"
+             oninput="cfg.mesa.musicians[${i}].ch_r=+this.value-1">
+      <input type="text"   value="${m.ip}"    placeholder="10.30.30.x"
+             oninput="cfg.mesa.musicians[${i}].ip=this.value">
+      <button class="btn-icon btn-remove" onclick="removeMusician(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+function addMusician() {
+  const last = cfg.mesa.musicians.at(-1);
+  cfg.mesa.musicians.push({
+    name: 'Músico', ch_l: (last ? last.ch_r+1 : 34),
+    ch_r: (last ? last.ch_r+2 : 35), ip: '10.30.30.'
+  });
+  renderMusicians();
+}
+function removeMusician(i) {
+  cfg.mesa.musicians.splice(i, 1);
+  renderMusicians();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function switchTab(mode) {
+  currentMode = mode;
+  cfg.mode    = mode;
+  document.getElementById('tab-radio').classList.toggle('active', mode === 'radio');
+  document.getElementById('tab-mesa').classList.toggle('active',  mode === 'mesa');
+  document.getElementById('panel-radio').classList.toggle('active', mode === 'radio');
+  document.getElementById('panel-mesa').classList.toggle('active',  mode === 'mesa');
+}
+
+// ── Salvar ────────────────────────────────────────────────────
+async function saveConfig() {
+  cfg.radio.url          = document.getElementById('radio-url').value;
+  cfg.radio.aplay_dev    = document.getElementById('radio-aplay').value;
+  cfg.radio.aplay_buf_ms = +document.getElementById('radio-buf').value;
+  cfg.mesa.alsa_device   = document.getElementById('mesa-alsa').value;
+  cfg.mesa.total_channels = +document.getElementById('mesa-channels').value;
+  cfg.mode = currentMode;
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(cfg)
+  });
+  toast('Configuração salva!');
+}
+
+// ── Stream ────────────────────────────────────────────────────
+async function toggleStream() {
+  const streaming = document.getElementById('badge').classList.contains('on');
+  const url = streaming ? '/api/stop' : '/api/start';
+  await saveConfig();
+  const r = await fetch(url, {method: 'POST'});
+  const d = await r.json();
+  if (!d.ok) toast(d.msg);
+  updateStatus();
+}
+
+// ── Status ────────────────────────────────────────────────────
+function updateStatus() {
+  fetch('/api/status').then(r => r.json()).then(data => {
+    const badge = document.getElementById('badge');
+    const btn   = document.getElementById('btn-main');
+    const txt   = document.getElementById('badge-txt');
+    if (data.streaming) {
+      badge.className = 'badge on';
+      txt.textContent  = 'Transmitindo';
+      btn.className    = 'btn-stream stop';
+      btn.textContent  = 'Parar';
+    } else {
+      badge.className = 'badge off';
+      txt.textContent  = 'Parado';
+      btn.className    = 'btn-stream start';
+      btn.textContent  = 'Iniciar';
+    }
+    renderStatusCards(data.destinations || []);
+  });
+}
+
+function renderStatusCards(dests) {
+  const grid = document.getElementById('status-grid');
+  if (!dests.length) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:0.85rem">Nenhum receptor configurado.</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  dests.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'status-card ' + (d.online ? 'online' : 'offline');
+    const rate = d.pkt_rate || 0;
+    const dot  = d.online
+      ? '<span style="color:var(--green)">● Online</span>'
+      : '<span style="color:var(--red)">● Offline</span>';
+    card.innerHTML = `
+      <div class="s-name">${d.name || d.ip || '?'}</div>
+      <div class="s-ip">${d.ip || ''}</div>
+      <div class="s-rate">${rate}</div>
+      <div class="s-label">pkt/s</div>
+      <div style="font-size:0.72rem;margin-top:6px">${dot}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+loadConfig();
+updateStatus();
+setInterval(updateStatus, 2000);
+</script>
+</body>
+</html>
