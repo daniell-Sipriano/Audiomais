@@ -14,8 +14,8 @@
 #define SAMPLE_RATE     48000
 #define BYTES_PER_FRAME 4
 
-#define BUF_SIZE   (SAMPLE_RATE * BYTES_PER_FRAME * 200 / 1000)
-#define START_FILL (SAMPLE_RATE * BYTES_PER_FRAME * 30  / 1000)
+#define BUF_SIZE   (SAMPLE_RATE * BYTES_PER_FRAME * 600 / 1000)
+#define START_FILL (SAMPLE_RATE * BYTES_PER_FRAME * 120 / 1000)
 
 static StreamBufferHandle_t stream_buf;
 static i2s_chan_handle_t     tx_handle;
@@ -25,20 +25,32 @@ static volatile bool         playing = false;
 void taskI2S(void *) {
     uint8_t buf[960];
     size_t  written;
+    int     underruns = 0;
     while (true) {
         if (!playing) {
             if (xStreamBufferBytesAvailable(stream_buf) >= START_FILL) {
-                playing = true;
+                playing   = true;
+                underruns = 0;
                 Serial.println("I2S: iniciando");
             } else {
                 vTaskDelay(1);
                 continue;
             }
         }
-        size_t got = xStreamBufferReceive(stream_buf, buf, sizeof(buf), pdMS_TO_TICKS(10));
+        size_t got = xStreamBufferReceive(stream_buf, buf, sizeof(buf), pdMS_TO_TICKS(20));
         if (got == 0) {
+            underruns++;
+            if (underruns >= 10) {
+                // 10 × 20ms = 200ms sem dados → rebufferiza
+                playing = false;
+                xStreamBufferReset(stream_buf);
+                underruns = 0;
+                Serial.println("I2S: rebufferizando");
+            }
             memset(buf, 0, sizeof(buf));
             got = sizeof(buf);
+        } else {
+            underruns = 0;
         }
         got = (got / BYTES_PER_FRAME) * BYTES_PER_FRAME;
         if (got > 0)
@@ -65,6 +77,7 @@ void setup() {
     Serial.println("\n=== Audiomais UDP ===");
 
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
     Serial.print("WiFi");
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
