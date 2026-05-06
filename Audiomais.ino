@@ -15,7 +15,7 @@
 #define BYTES_PER_FRAME 4
 
 #define BUF_SIZE   (SAMPLE_RATE * BYTES_PER_FRAME * 600 / 1000)
-#define START_FILL (SAMPLE_RATE * BYTES_PER_FRAME * 120 / 1000)
+#define START_FILL (SAMPLE_RATE * BYTES_PER_FRAME * 40  / 1000)
 
 static StreamBufferHandle_t stream_buf;
 static i2s_chan_handle_t     tx_handle;
@@ -25,32 +25,23 @@ static volatile bool         playing = false;
 void taskI2S(void *) {
     uint8_t buf[960];
     size_t  written;
-    int     underruns = 0;
     while (true) {
         if (!playing) {
             if (xStreamBufferBytesAvailable(stream_buf) >= START_FILL) {
-                playing   = true;
-                underruns = 0;
+                playing = true;
                 Serial.println("I2S: iniciando");
             } else {
-                vTaskDelay(1);
+                vTaskDelay(2);
                 continue;
             }
         }
-        size_t got = xStreamBufferReceive(stream_buf, buf, sizeof(buf), pdMS_TO_TICKS(20));
+        // Espera até 50ms por dados — absorve jitter WiFi sem inserir silêncio
+        size_t got = xStreamBufferReceive(stream_buf, buf, sizeof(buf), pdMS_TO_TICKS(50));
         if (got == 0) {
-            underruns++;
-            if (underruns >= 10) {
-                // 10 × 20ms = 200ms sem dados → rebufferiza
-                playing = false;
-                xStreamBufferReset(stream_buf);
-                underruns = 0;
-                Serial.println("I2S: rebufferizando");
-            }
-            memset(buf, 0, sizeof(buf));
-            got = sizeof(buf);
-        } else {
-            underruns = 0;
+            // Sem dados por 50ms → rebufferiza (não reseta: preserva dados que chegaram)
+            playing = false;
+            Serial.println("I2S: rebufferizando");
+            continue;
         }
         got = (got / BYTES_PER_FRAME) * BYTES_PER_FRAME;
         if (got > 0)

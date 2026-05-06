@@ -130,23 +130,27 @@ def radio_stream(cfg, stop_ev):
                 time.sleep(1)
 
     def aplay_worker():
-        proc = subprocess.Popen([
-            'aplay', '-D', dev, '-t', 'raw', '-f', 'S16_LE',
-            '-r', str(SAMPLE_RATE), '-c', str(CHANNELS),
-            f'--period-size={period}', f'--buffer-size={buf}'
-        ], stdin=subprocess.PIPE)
         while not stop_ev.is_set():
+            proc = subprocess.Popen([
+                'aplay', '-D', dev, '-t', 'raw', '-f', 'S16_LE',
+                '-r', str(SAMPLE_RATE), '-c', str(CHANNELS),
+                f'--period-size={period}', f'--buffer-size={buf}'
+            ], stdin=subprocess.PIPE)
             try:
-                data = aplay_q.get(timeout=1)
-            except queue.Empty:
-                continue
-            if data is None:
-                break
-            try:
-                proc.stdin.write(data)
+                while not stop_ev.is_set():
+                    try:
+                        data = aplay_q.get(timeout=1)
+                    except queue.Empty:
+                        continue
+                    if data is None:
+                        break
+                    proc.stdin.write(data)
             except Exception:
-                break
-        proc.terminate()
+                pass
+            finally:
+                proc.terminate()
+            if not stop_ev.is_set():
+                time.sleep(0.5)
 
     threading.Thread(target=ffmpeg_reader, daemon=True).start()
     threading.Thread(target=aplay_worker,  daemon=True).start()
