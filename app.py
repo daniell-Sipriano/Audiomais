@@ -17,7 +17,8 @@ DEFAULT_CONFIG = {
         "url": "http://a1rj.streams.com.br:7801/stream",
         "esp32_ips": ["10.30.30.199"],
         "aplay_dev": "plughw:1,0",
-        "aplay_buf_ms": 25
+        "aplay_buf_ms": 25,
+        "custom_radios": []
     },
     "mesa": {
         "alsa_device": "hw:1,0",
