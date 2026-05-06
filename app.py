@@ -90,7 +90,7 @@ def radio_stream(cfg, stop_ev):
     buf    = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
 
     sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    pkt_q    = queue.Queue(maxsize=400)
+    pkt_q    = queue.Queue(maxsize=1000)
     aplay_q  = queue.Queue(maxsize=400)
 
     for ip in ips:
@@ -166,11 +166,11 @@ def radio_stream(cfg, stop_ev):
             next_send = now
 
         wait = next_send - now
-        if wait > 0.0001:
-            time.sleep(wait - 0.0001)
+        if wait > 0.002:
+            time.sleep(wait - 0.002)
         while time.monotonic() < next_send:
             pass
-        if wait < -0.05:
+        if wait < -0.1:
             next_send = time.monotonic()
 
         for ip in ips:
@@ -281,11 +281,11 @@ def mesa_stream(cfg, stop_ev):
             if next_send is None:
                 next_send = now
             wait = next_send - now
-            if wait > 0.0001:
-                time.sleep(wait - 0.0001)
+            if wait > 0.002:
+                time.sleep(wait - 0.002)
             while time.monotonic() < next_send:
                 pass
-            if wait < -0.05:
+            if wait < -0.1:
                 next_send = time.monotonic()
 
             sock_udp.sendto(pkt, (ip, 9999))
