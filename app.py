@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
         "esp32_ips": ["10.30.30.199"],
         "aplay_dev": "plughw:1,0",
         "aplay_buf_ms": 25,
+        "volume": 1.0,
         "custom_radios": []
     },
     "mesa": {
@@ -36,12 +37,16 @@ DEFAULT_CONFIG = {
 # ── Estado global ─────────────────────────────────────────────
 streaming  = False
 stop_event = threading.Event()
-status     = {}   # ip → {name, pkt_rate, pkts_total, online}
+status     = {}
 
 SAMPLE_RATE = 48000
 CHANNELS    = 2
 PACKET_SIZE = 960
 INTERVAL    = PACKET_SIZE / (SAMPLE_RATE * CHANNELS * 2)
+
+# ffmpeg proc ativo (para hot-swap de rádio/volume)
+_active_ffmpeg_proc = [None]
+_ffmpeg_lock = threading.Lock()
 
 # ── Config ────────────────────────────────────────────────────
 def load_config():
@@ -78,16 +83,15 @@ def ping_loop():
 threading.Thread(target=ping_loop, daemon=True).start()
 
 # ── Modo Rádio ────────────────────────────────────────────────
-def radio_stream(cfg, stop_ev):
-    rc   = cfg['radio']
-    url  = rc['url']
+def radio_stream(cfg_init, stop_ev):
+    rc   = cfg_init['radio']
     ips  = rc['esp32_ips']
     dev  = rc['aplay_dev']
     period = int(SAMPLE_RATE * 0.005)
     buf    = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
 
     sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    pkt_q    = queue.Queue(maxsize=400)
+    pkt_q    = queue.Queue(maxsize=600)
     aplay_q  = queue.Queue(maxsize=400)
 
     for ip in ips:
@@ -97,12 +101,22 @@ def radio_stream(cfg, stop_ev):
 
     def ffmpeg_reader():
         while not stop_ev.is_set():
+            # re-lê config a cada restart para pegar nova URL e volume
+            rc_now = load_config()['radio']
+            url    = rc_now['url']
+            vol    = rc_now.get('volume', 1.0)
             proc = subprocess.Popen([
                 'ffmpeg', '-hide_banner', '-loglevel', 'warning',
+                '-reconnect', '1',
+                '-reconnect_streamed', '1',
+                '-reconnect_delay_max', '5',
                 '-i', url,
+                '-af', f'volume={vol}',
                 '-ar', str(SAMPLE_RATE), '-ac', str(CHANNELS),
                 '-f', 's16le', '-'
             ], stdout=subprocess.PIPE)
+            with _ffmpeg_lock:
+                _active_ffmpeg_proc[0] = proc
             leftover = b''
             try:
                 while not stop_ev.is_set():
@@ -115,8 +129,11 @@ def radio_stream(cfg, stop_ev):
                         leftover = leftover[PACKET_SIZE:]
             finally:
                 proc.terminate()
+                with _ffmpeg_lock:
+                    if _active_ffmpeg_proc[0] is proc:
+                        _active_ffmpeg_proc[0] = None
             if not stop_ev.is_set():
-                time.sleep(3)
+                time.sleep(1)
 
     def aplay_worker():
         proc = subprocess.Popen([
@@ -154,9 +171,11 @@ def radio_stream(cfg, stop_ev):
         if next_send is None:
             next_send = now
         wait = next_send - now
-        if wait > 0:
-            time.sleep(wait)
-        elif wait < -0.1:
+        if wait > 0.0001:
+            time.sleep(wait - 0.0001)
+        while time.monotonic() < next_send:
+            pass  # busy-wait último 0.1ms — elimina jitter do sleep
+        if wait < -0.05:
             next_send = time.monotonic()
 
         for ip in ips:
@@ -335,6 +354,14 @@ def api_status():
         'mode': load_config().get('mode', 'radio'),
         'destinations': list(status.values())
     })
+
+@app.route('/api/reload_radio', methods=['POST'])
+def api_reload_radio():
+    with _ffmpeg_lock:
+        proc = _active_ffmpeg_proc[0]
+    if proc and proc.poll() is None:
+        proc.terminate()
+    return jsonify({'ok': True})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=False)

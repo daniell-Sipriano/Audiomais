@@ -19,41 +19,25 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
 
-  /* Header */
   header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky; top: 0; z-index: 10;
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 10;
   }
   header h1 { font-size: 1.3rem; letter-spacing: 1px; color: var(--accent); }
   header .subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
 
   .btn-stream {
-    padding: 10px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s;
+    padding: 10px 24px; border: none; border-radius: 8px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
   }
   .btn-stream:hover { opacity: 0.85; }
   .btn-stream.start { background: var(--green); color: #fff; }
   .btn-stream.stop  { background: var(--red);   color: #fff; }
 
-  /* Status badge */
   .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
   }
   .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
   .badge.on  { background: #16532a; color: var(--green); }
@@ -64,10 +48,11 @@
 
   main { max-width: 700px; margin: 0 auto; padding: 20px; }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; background: var(--card);
-          border: 1px solid var(--border); border-radius: 10px;
-          padding: 4px; margin-bottom: 20px; }
+  .tabs {
+    display: flex; gap: 4px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 4px; margin-bottom: 20px;
+  }
   .tab {
     flex: 1; padding: 10px; border: none; border-radius: 7px;
     background: transparent; color: var(--muted);
@@ -75,20 +60,17 @@
   }
   .tab.active { background: var(--accent); color: #fff; }
 
-  /* Cards */
   .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px; margin-bottom: 16px;
   }
-  .card h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase;
-             letter-spacing: 0.5px; margin-bottom: 14px; }
+  .card h3 {
+    font-size: 0.85rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 14px;
+  }
 
-  /* Form elements */
   label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; }
-  input, select {
+  input[type=text], input[type=number], select {
     width: 100%; padding: 9px 12px;
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 8px; color: var(--text); font-size: 0.9rem;
@@ -97,7 +79,21 @@
   input:focus, select:focus { border-color: var(--accent); }
   .field { margin-bottom: 14px; }
 
-  /* IP list */
+  /* Volume slider */
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 6px;
+    background: var(--border); border-radius: 3px;
+    padding: 0; border: none; cursor: pointer; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px;
+    background: var(--accent); border-radius: 50%; cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px; background: var(--accent);
+    border-radius: 50%; border: none; cursor: pointer;
+  }
+
   .ip-list { display: flex; flex-direction: column; gap: 8px; }
   .ip-row  { display: flex; gap: 8px; align-items: center; }
   .ip-row input { flex: 1; }
@@ -107,26 +103,25 @@
     align-items: center; justify-content: center; flex-shrink: 0;
   }
   .btn-remove { background: #3b1414; color: var(--red); }
-  .btn-add    { background: #162032; color: var(--accent); width: auto;
-                padding: 7px 14px; font-size: 0.85rem; font-weight: 600; border-radius: 7px; }
+  .btn-add {
+    background: #162032; color: var(--accent); width: auto;
+    padding: 7px 14px; font-size: 0.85rem; font-weight: 600;
+    border-radius: 7px; border: none; cursor: pointer;
+  }
 
-  /* Musician table */
   .musician-row {
-    display: grid;
-    grid-template-columns: 1fr 60px 60px 1fr 34px;
+    display: grid; grid-template-columns: 1fr 60px 60px 1fr 34px;
     gap: 6px; align-items: center; margin-bottom: 8px;
   }
   .musician-row input { padding: 7px 9px; font-size: 0.82rem; }
   .col-header {
-    display: grid;
-    grid-template-columns: 1fr 60px 60px 1fr 34px;
+    display: grid; grid-template-columns: 1fr 60px 60px 1fr 34px;
     gap: 6px; margin-bottom: 6px;
   }
   .col-header span { font-size: 0.72rem; color: var(--muted); text-align: center; }
   .col-header span:first-child { text-align: left; }
   .col-header span:nth-child(4) { text-align: left; }
 
-  /* Status cards */
   .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .status-card {
     background: var(--bg); border: 1px solid var(--border);
@@ -139,13 +134,19 @@
   .status-card.online   { border-color: #16532a; }
   .status-card.offline  { border-color: #3b1414; opacity: 0.6; }
 
-  /* Save button */
   .btn-save {
     width: 100%; padding: 11px; background: var(--accent); color: #fff;
     border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 600;
     cursor: pointer; margin-top: 4px; transition: opacity 0.2s;
   }
   .btn-save:hover { opacity: 0.85; }
+
+  .btn-trocar {
+    width: auto; padding: 9px 16px; background: #ca8a04; color: #fff;
+    border: none; border-radius: 9px; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: opacity 0.2s;
+  }
+  .btn-trocar:hover { opacity: 0.85; }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -157,31 +158,6 @@
 
   .panel { display: none; }
   .panel.active { display: block; }
-
-  /* Radio picker */
-  .radio-search {
-    width: 100%; padding: 9px 12px;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 0.9rem;
-    outline: none; transition: border-color 0.2s; margin-bottom: 10px;
-  }
-  .radio-search:focus { border-color: var(--accent); }
-  .radio-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 8px; margin-bottom: 4px;
-  }
-  .radio-card {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
-    cursor: pointer; transition: border-color 0.2s;
-    display: flex; justify-content: space-between; align-items: center; gap: 6px;
-  }
-  .radio-card:hover { border-color: var(--accent); }
-  .radio-card.selected { border-color: var(--accent); background: #162032; }
-  .radio-card .rc-name { font-size: 0.82rem; font-weight: 600; line-height: 1.3; }
-  .radio-card .rc-freq { font-size: 0.7rem; color: var(--muted); }
-  .radio-none { font-size: 0.82rem; color: var(--muted); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -199,7 +175,6 @@
 
 <main>
 
-  <!-- Status -->
   <div class="card">
     <h3>Status dos receptores</h3>
     <div class="status-grid" id="status-grid">
@@ -207,7 +182,6 @@
     </div>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab active" id="tab-radio" onclick="switchTab('radio')">📻 Rádio / Internet</button>
     <button class="tab"        id="tab-mesa"  onclick="switchTab('mesa')">🎛️ Mesa de Som</button>
@@ -219,15 +193,28 @@
       <h3>Configuração — Modo Rádio</h3>
 
       <div class="field">
-        <label>Buscar rádio</label>
-        <input class="radio-search" type="text" id="radio-search" placeholder="Digite para filtrar..." oninput="filterRadios(this.value)">
-        <div class="radio-grid" id="radio-grid"></div>
+        <label>Rádio</label>
+        <select id="radio-select" onchange="selectRadioFromDropdown(this.value)"></select>
       </div>
 
       <div class="field">
-        <label>URL da rádio selecionada</label>
-        <input type="text" id="radio-url" placeholder="http://..." oninput="highlightSelected()">
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="flex:1">
+            <label>URL</label>
+            <input type="text" id="radio-url" placeholder="http://...">
+          </div>
+          <button id="btn-trocar" class="btn-trocar" onclick="trocarRadio()" style="display:none">
+            Trocar rádio
+          </button>
+        </div>
       </div>
+
+      <div class="field">
+        <label>Volume — <span id="vol-pct">100%</span></label>
+        <input type="range" id="radio-vol" min="0" max="200" value="100"
+               oninput="document.getElementById('vol-pct').textContent=this.value+'%'">
+      </div>
+
       <div class="field">
         <label>Dispositivo de áudio local (aplay)</label>
         <input type="text" id="radio-aplay" placeholder="plughw:1,0">
@@ -246,6 +233,7 @@
 
     <div class="card">
       <h3>+ Adicionar rádio personalizada</h3>
+      <div id="custom-radios-list"></div>
       <div class="field">
         <label>Nome</label>
         <input type="text" id="new-radio-name" placeholder="Ex: Rádio Globo Rio">
@@ -291,10 +279,10 @@ let currentMode = 'radio';
 let cfg = {};
 
 const PRESET_RADIOS = [
-  { name: 'Antena 1 Rio',         freq: '103.7 FM', url: 'http://a1rj.streams.com.br:7801/stream' },
-  { name: 'Máquina do Tempo MPB', freq: 'Online',   url: 'http://servidor28.brlogic.com:8032/live' },
-  { name: 'Máquina do Tempo Int', freq: 'Online',   url: 'http://servidor28.brlogic.com:8212/live' },
-  { name: 'Flashback FM',         freq: 'Online',   url: 'http://hd.matutos.com.br:8008/;stream.mp3' },
+  { name: 'Antena 1 Rio — 103.7 FM',        url: 'http://a1rj.streams.com.br:7801/stream' },
+  { name: 'Máquina do Tempo MPB',            url: 'http://servidor28.brlogic.com:8032/live' },
+  { name: 'Máquina do Tempo Internacional',  url: 'http://servidor28.brlogic.com:8212/live' },
+  { name: 'Flashback FM',                    url: 'http://hd.matutos.com.br:8008/;stream.mp3' },
 ];
 
 // ── Carregar config ───────────────────────────────────────────
@@ -302,82 +290,110 @@ async function loadConfig() {
   const r = await fetch('/api/config');
   cfg = await r.json();
   if (!cfg.radio.custom_radios) cfg.radio.custom_radios = [];
+  if (cfg.radio.volume === undefined) cfg.radio.volume = 1.0;
   currentMode = cfg.mode;
   renderAll();
   switchTab(currentMode);
 }
 
 function renderAll() {
-  document.getElementById('radio-url').value   = cfg.radio.url;
-  document.getElementById('radio-aplay').value = cfg.radio.aplay_dev;
-  document.getElementById('radio-buf').value   = cfg.radio.aplay_buf_ms;
+  const volPct = Math.round((cfg.radio.volume || 1.0) * 100);
+  document.getElementById('radio-url').value           = cfg.radio.url;
+  document.getElementById('radio-aplay').value         = cfg.radio.aplay_dev;
+  document.getElementById('radio-buf').value           = cfg.radio.aplay_buf_ms;
+  document.getElementById('radio-vol').value           = volPct;
+  document.getElementById('vol-pct').textContent       = volPct + '%';
+  renderDropdown();
+  renderCustomList();
   renderIPs();
-  renderRadios('');
 
   document.getElementById('mesa-alsa').value     = cfg.mesa.alsa_device;
   document.getElementById('mesa-channels').value = cfg.mesa.total_channels;
   renderMusicians();
 }
 
-// ── Rádios ────────────────────────────────────────────────────
-function renderRadios(filter) {
-  const grid = document.getElementById('radio-grid');
-  const term = (filter || '').toLowerCase();
+// ── Dropdown de rádios ────────────────────────────────────────
+function renderDropdown() {
+  const sel = document.getElementById('radio-select');
   const currentUrl = document.getElementById('radio-url').value;
-  const all = [
-    ...PRESET_RADIOS,
-    ...(cfg.radio.custom_radios || []).map((r, i) => ({ ...r, customIdx: i }))
-  ];
-  const filtered = term ? all.filter(r => r.name.toLowerCase().includes(term)) : all;
+  const custom = cfg.radio.custom_radios || [];
+  sel.innerHTML = '';
 
-  if (!filtered.length) {
-    grid.innerHTML = '<div class="radio-none">Nenhuma rádio encontrada.</div>';
-    return;
-  }
-  grid.innerHTML = '';
-  filtered.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'radio-card' + (r.url === currentUrl ? ' selected' : '');
-    const isCustom = r.customIdx !== undefined;
-    card.innerHTML = `
-      <div onclick="selectRadio('${r.url.replace(/'/g,"\\'")}')">
-        <div class="rc-name">${r.name}</div>
-        <div class="rc-freq">${r.freq || 'Personalizada'}</div>
-      </div>
-      ${isCustom ? `<button class="btn-icon btn-remove" style="flex-shrink:0" onclick="removeCustomRadio(${r.customIdx})">✕</button>` : ''}`;
-    grid.appendChild(card);
+  const presetGroup = document.createElement('optgroup');
+  presetGroup.label = 'Rádios disponíveis';
+  PRESET_RADIOS.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.url;
+    opt.textContent = r.name;
+    if (r.url === currentUrl) opt.selected = true;
+    presetGroup.appendChild(opt);
   });
+  sel.appendChild(presetGroup);
+
+  if (custom.length) {
+    const customGroup = document.createElement('optgroup');
+    customGroup.label = 'Personalizadas';
+    custom.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.url;
+      opt.textContent = r.name;
+      if (r.url === currentUrl) opt.selected = true;
+      customGroup.appendChild(opt);
+    });
+    sel.appendChild(customGroup);
+  }
 }
 
-function filterRadios(val) {
-  renderRadios(val);
-}
-
-function selectRadio(url) {
+function selectRadioFromDropdown(url) {
   document.getElementById('radio-url').value = url;
-  renderRadios(document.getElementById('radio-search').value);
 }
 
-function highlightSelected() {
-  renderRadios(document.getElementById('radio-search').value);
+// ── Lista de rádios personalizadas ────────────────────────────
+function renderCustomList() {
+  const list = document.getElementById('custom-radios-list');
+  const custom = cfg.radio.custom_radios || [];
+  if (!custom.length) { list.innerHTML = ''; return; }
+  list.innerHTML = '';
+  custom.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'ip-row';
+    row.style.marginBottom = '8px';
+    row.innerHTML = `
+      <span style="flex:1;font-size:0.85rem;padding:0 4px">${r.name}</span>
+      <button class="btn-icon btn-remove" onclick="removeCustomRadio(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+  // separador visual
+  const sep = document.createElement('hr');
+  sep.style.cssText = 'border:none;border-top:1px solid var(--border);margin:10px 0 14px';
+  list.appendChild(sep);
 }
 
 function addCustomRadio() {
   const name = document.getElementById('new-radio-name').value.trim();
   const url  = document.getElementById('new-radio-url').value.trim();
   if (!name || !url) { toast('Preencha nome e URL'); return; }
-  cfg.radio.custom_radios.push({ name, freq: 'Personalizada', url });
+  cfg.radio.custom_radios.push({ name, url });
   document.getElementById('new-radio-name').value = '';
   document.getElementById('new-radio-url').value  = '';
-  renderRadios(document.getElementById('radio-search').value);
+  renderDropdown();
+  renderCustomList();
   saveConfig();
   toast('Rádio adicionada!');
 }
 
 function removeCustomRadio(i) {
   cfg.radio.custom_radios.splice(i, 1);
-  renderRadios(document.getElementById('radio-search').value);
+  renderDropdown();
+  renderCustomList();
   saveConfig();
+}
+
+// ── Trocar rádio sem parar ────────────────────────────────────
+async function trocarRadio() {
+  await saveConfig();
+  await fetch('/api/reload_radio', { method: 'POST' });
+  toast('Trocando rádio...');
 }
 
 // ── IPs ───────────────────────────────────────────────────────
@@ -393,14 +409,8 @@ function renderIPs() {
     list.appendChild(row);
   });
 }
-function addIP() {
-  cfg.radio.esp32_ips.push('10.30.30.');
-  renderIPs();
-}
-function removeIP(i) {
-  cfg.radio.esp32_ips.splice(i, 1);
-  renderIPs();
-}
+function addIP() { cfg.radio.esp32_ips.push('10.30.30.'); renderIPs(); }
+function removeIP(i) { cfg.radio.esp32_ips.splice(i, 1); renderIPs(); }
 
 // ── Músicos ───────────────────────────────────────────────────
 function renderMusicians() {
@@ -430,10 +440,7 @@ function addMusician() {
   });
   renderMusicians();
 }
-function removeMusician(i) {
-  cfg.mesa.musicians.splice(i, 1);
-  renderMusicians();
-}
+function removeMusician(i) { cfg.mesa.musicians.splice(i, 1); renderMusicians(); }
 
 // ── Tabs ──────────────────────────────────────────────────────
 function switchTab(mode) {
@@ -450,6 +457,7 @@ async function saveConfig() {
   cfg.radio.url           = document.getElementById('radio-url').value;
   cfg.radio.aplay_dev     = document.getElementById('radio-aplay').value;
   cfg.radio.aplay_buf_ms  = +document.getElementById('radio-buf').value;
+  cfg.radio.volume        = +document.getElementById('radio-vol').value / 100;
   cfg.mesa.alsa_device    = document.getElementById('mesa-alsa').value;
   cfg.mesa.total_channels = +document.getElementById('mesa-channels').value;
   cfg.mode = currentMode;
@@ -478,16 +486,20 @@ function updateStatus() {
     const badge = document.getElementById('badge');
     const btn   = document.getElementById('btn-main');
     const txt   = document.getElementById('badge-txt');
+    const btnT  = document.getElementById('btn-trocar');
+
     if (data.streaming) {
       badge.className = 'badge on';
       txt.textContent  = 'Transmitindo';
       btn.className    = 'btn-stream stop';
       btn.textContent  = 'Parar';
+      btnT.style.display = (data.mode === 'radio') ? '' : 'none';
     } else {
       badge.className = 'badge off';
       txt.textContent  = 'Parado';
       btn.className    = 'btn-stream start';
       btn.textContent  = 'Iniciar';
+      btnT.style.display = 'none';
     }
     renderStatusCards(data.destinations || []);
   });
@@ -528,7 +540,7 @@ function toast(msg) {
 // ── Init ──────────────────────────────────────────────────────
 loadConfig();
 updateStatus();
-setInterval(updateStatus, 2000);
+setInterval(updateStatus, 3000);
 </script>
 </body>
 </html>
