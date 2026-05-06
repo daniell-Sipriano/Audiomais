@@ -174,8 +174,11 @@ def radio_stream(cfg, stop_ev):
             next_send = time.monotonic()
 
         for ip in ips:
-            sock_udp.sendto(pkt, (ip, 9999))
-            counts[ip] = counts.get(ip, 0) + 1
+            try:
+                sock_udp.sendto(pkt, (ip, 9999))
+                counts[ip] = counts.get(ip, 0) + 1
+            except OSError:
+                pass
 
         next_send += INTERVAL
 
