@@ -86,14 +86,6 @@
   }
   .volume-val { font-size: 0.9rem; font-weight: 700; color: var(--accent); min-width: 42px; text-align: right; }
 
-  .btn-swap {
-    width: 100%; padding: 10px; background: #162032; color: var(--accent);
-    border: 1px solid var(--accent); border-radius: 9px;
-    font-size: 0.9rem; font-weight: 600; cursor: pointer;
-    margin-bottom: 12px; transition: opacity 0.2s; display: none;
-  }
-  .btn-swap:hover { opacity: 0.8; }
-  .btn-swap.visible { display: block; }
 
   .ip-list { display: flex; flex-direction: column; gap: 8px; }
   .ip-row  { display: flex; gap: 8px; align-items: center; }
@@ -198,8 +190,6 @@
           <span class="volume-val" id="vol-val">100%</span>
         </div>
       </div>
-
-      <button class="btn-swap" id="btn-swap" onclick="swapRadio()">⟳ Trocar rádio sem parar</button>
 
       <div class="field">
         <label>Dispositivo de áudio local (aplay)</label>
@@ -340,14 +330,6 @@ function updateVolDisplay() {
   const pct = Math.round(v * 100) + '%';
   document.getElementById('vol-pct').textContent = pct;
   document.getElementById('vol-val').textContent  = pct;
-}
-
-// ── Trocar rádio sem parar ────────────────────────────────────
-async function swapRadio() {
-  await saveConfig();
-  const r = await fetch('/api/reload_radio', { method: 'POST' });
-  const d = await r.json();
-  toast(d.ok ? 'Trocando rádio...' : 'Erro ao trocar rádio');
 }
 
 // ── Rádio personalizada ───────────────────────────────────────
@@ -508,19 +490,16 @@ function updateStatus() {
     const badge   = document.getElementById('badge');
     const btn     = document.getElementById('btn-main');
     const txt     = document.getElementById('badge-txt');
-    const btnSwap = document.getElementById('btn-swap');
     if (data.streaming) {
       badge.className = 'badge on';
       txt.textContent = 'Transmitindo';
       btn.className   = 'btn-stream stop';
       btn.textContent = 'Parar';
-      if (data.mode === 'radio') btnSwap.classList.add('visible');
     } else {
       badge.className = 'badge off';
       txt.textContent = 'Parado';
       btn.className   = 'btn-stream start';
       btn.textContent = 'Iniciar';
-      btnSwap.classList.remove('visible');
     }
     renderStatusCards(data.destinations || []);
   });
