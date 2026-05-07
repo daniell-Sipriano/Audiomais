@@ -176,11 +176,19 @@ def radio_stream(cfg, stop_ev):
         ip    = get_ip(entry)
         delay = (entry.get('delay_ms', 0) if isinstance(entry, dict) else 0) / 1000.0
         q     = ip_queues[ip]
+        last_cfg_check = 0.0
         while not stop_ev.is_set():
             try:
                 send_time, pkt = q.get(timeout=0.5)
             except queue.Empty:
                 continue
+            now = time.monotonic()
+            if now - last_cfg_check >= 1.0:
+                for e in load_config()['radio']['esp32_ips']:
+                    if get_ip(e) == ip:
+                        delay = (e.get('delay_ms', 0) if isinstance(e, dict) else 0) / 1000.0
+                        break
+                last_cfg_check = now
             target = send_time + delay
             wait   = target - time.monotonic()
             if wait > 0.002:
@@ -319,9 +327,10 @@ def mesa_stream(cfg, stop_ev):
         ip    = musician['ip']
         delay = musician.get('delay_ms', 0) / 1000.0
         q     = qs[ip]
-        next_send   = None
-        count       = 0
-        last_update = time.monotonic()
+        next_send      = None
+        count          = 0
+        last_update    = time.monotonic()
+        last_cfg_check = 0.0
 
         while not stop_ev.is_set():
             try:
@@ -331,6 +340,16 @@ def mesa_stream(cfg, stop_ev):
                 continue
 
             now = time.monotonic()
+            if now - last_cfg_check >= 1.0:
+                for m in load_config()['mesa']['musicians']:
+                    if m['ip'] == ip:
+                        new_delay = m.get('delay_ms', 0) / 1000.0
+                        if new_delay != delay and next_send is not None:
+                            next_send += new_delay - delay
+                        delay = new_delay
+                        break
+                last_cfg_check = now
+
             if next_send is None:
                 next_send = now + delay
             wait = next_send - now
