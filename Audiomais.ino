@@ -13,6 +13,7 @@
 #define UDP_PORT        9999
 #define SAMPLE_RATE     48000
 #define BYTES_PER_FRAME 4
+#define PACKET_BYTES    960
 
 #define BUF_SIZE   (SAMPLE_RATE * BYTES_PER_FRAME * 600 / 1000)
 #define START_FILL (SAMPLE_RATE * BYTES_PER_FRAME * 40  / 1000)
@@ -23,10 +24,13 @@ static WiFiUDP               udp;
 static volatile bool         playing = false;
 
 void taskI2S(void *) {
-    uint8_t buf[960];
+    uint8_t buf[PACKET_BYTES];
     size_t  written;
+    size_t  filled = 0;
+
     while (true) {
         if (!playing) {
+            filled = 0;
             if (xStreamBufferBytesAvailable(stream_buf) >= START_FILL) {
                 playing = true;
                 Serial.println("I2S: iniciando");
@@ -35,17 +39,24 @@ void taskI2S(void *) {
                 continue;
             }
         }
-        // Espera até 50ms por dados — absorve jitter WiFi sem inserir silêncio
-        size_t got = xStreamBufferReceive(stream_buf, buf, sizeof(buf), pdMS_TO_TICKS(50));
+
+        // Acumula até ter um pacote completo (960 bytes)
+        size_t got = xStreamBufferReceive(stream_buf, buf + filled,
+                                          PACKET_BYTES - filled, pdMS_TO_TICKS(50));
         if (got == 0) {
-            // Sem dados por 50ms → rebufferiza (não reseta: preserva dados que chegaram)
+            // 50ms sem dados → rebufferiza (sem reset: preserva o que chegou)
             playing = false;
+            filled  = 0;
             Serial.println("I2S: rebufferizando");
             continue;
         }
-        got = (got / BYTES_PER_FRAME) * BYTES_PER_FRAME;
-        if (got > 0)
-            i2s_channel_write(tx_handle, buf, got, &written, portMAX_DELAY);
+
+        filled += got;
+        if (filled < PACKET_BYTES) continue;  // pacote incompleto, aguarda mais
+
+        // Pacote completo e alinhado → escreve no I2S
+        filled = 0;
+        i2s_channel_write(tx_handle, buf, PACKET_BYTES, &written, portMAX_DELAY);
     }
 }
 
@@ -74,10 +85,11 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
     Serial.printf("\nIP: %s\n", WiFi.localIP().toString().c_str());
 
-    stream_buf = xStreamBufferCreate(BUF_SIZE, 1);
+    // trigger = PACKET_BYTES: só acorda o receiver quando há 1 pacote completo
+    stream_buf = xStreamBufferCreate(BUF_SIZE, PACKET_BYTES);
 
     i2s_chan_config_t ch = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
-    ch.dma_desc_num  = 4;
+    ch.dma_desc_num  = 6;
     ch.dma_frame_num = 240;
     ch.auto_clear    = true;
     i2s_new_channel(&ch, &tx_handle, NULL);
@@ -116,6 +128,7 @@ void loop() {
         udp.stop();
         WiFi.disconnect();
         delay(500);
+        WiFi.setSleep(false);
         WiFi.begin(WIFI_SSID, WIFI_PASS);
         while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
         Serial.printf("\nIP: %s\n", WiFi.localIP().toString().c_str());
