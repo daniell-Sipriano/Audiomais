@@ -6,9 +6,9 @@
 <title>Audiomais</title>
 <style>
   :root {
-    --bg:      #0f1117;
-    --card:    #1a1d27;
-    --border:  #2a2d3a;
+    --bg:      #0c0a22;
+    --card:    #181535;
+    --border:  #2c2858;
     --accent:  #4f8ef7;
     --green:   #22c55e;
     --red:     #ef4444;
@@ -17,19 +17,27 @@
     --muted:   #64748b;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
+  body { background: linear-gradient(135deg, #080a20 0%, #110832 100%); background-attachment: fixed; color: var(--text); font-family: system-ui, sans-serif; min-height: 100vh; }
 
   header {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, #0d0a2a 0%, #150932 100%);
+    border-bottom: 1px solid #3a3570;
     padding: 14px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     position: sticky; top: 0; z-index: 10;
   }
-  header h1 { font-size: 1.3rem; letter-spacing: 1px; color: var(--accent); }
-  header .subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+  header .subtitle { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+  footer {
+    text-align: center;
+    padding: 28px 20px 36px;
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+  }
+  footer .f-main { color: #b0b0c8; font-size: 0.8rem; letter-spacing: 0.5px; margin-bottom: 4px; }
+  footer .f-sub  { color: var(--muted); font-size: 0.72rem; }
 
   .btn-stream {
     padding: 10px 24px; border: none; border-radius: 8px;
@@ -144,7 +152,24 @@
 
 <header>
   <div>
-    <h1>🎧 AUDIOMAIS</h1>
+    <svg viewBox="0 0 228 42" height="40" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7c3aed"/>
+          <stop offset="100%" stop-color="#06b6d4"/>
+        </linearGradient>
+      </defs>
+      <!-- headphone arc -->
+      <path d="M4 23 C4 10 12 2 21 2 C30 2 38 10 38 23"
+            stroke="url(#lg)" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <!-- ear pieces -->
+      <rect x="0"  y="21" width="9" height="14" rx="4" fill="url(#lg)"/>
+      <rect x="33" y="21" width="9" height="14" rx="4" fill="url(#lg)"/>
+      <!-- text -->
+      <text x="52" y="30" font-family="system-ui,sans-serif" font-weight="700" font-size="24">
+        <tspan fill="#94a3b8">audio</tspan><tspan fill="#06b6d4">mais</tspan>
+      </text>
+    </svg>
     <div class="subtitle">Sistema de retorno in-ear sem fio</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
@@ -252,6 +277,11 @@
   </div>
 
 </main>
+
+<footer>
+  <div class="f-main">AUDIOMAIS — SISTEMA DE RETORNO IN-EAR SEM FIO</div>
+  <div class="f-sub">audiomais.com.br</div>
+</footer>
 
 <div class="toast" id="toast"></div>
 
