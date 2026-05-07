@@ -25,11 +25,11 @@ DEFAULT_CONFIG = {
         "alsa_device": "hw:1,0",
         "total_channels": 64,
         "musicians": [
-            {"name": "Baterista",   "ch_l": 34, "ch_r": 35, "ip": "10.30.30.10"},
-            {"name": "Baixista",    "ch_l": 36, "ch_r": 37, "ip": "10.30.30.11"},
-            {"name": "Guitarrista", "ch_l": 38, "ch_r": 39, "ip": "10.30.30.12"},
-            {"name": "Vocalista",   "ch_l": 40, "ch_r": 41, "ip": "10.30.30.13"},
-            {"name": "Tecladista",  "ch_l": 42, "ch_r": 43, "ip": "10.30.30.14"}
+            {"name": "Baterista",   "ch": 34, "ip": "10.30.30.10"},
+            {"name": "Baixista",    "ch": 36, "ip": "10.30.30.11"},
+            {"name": "Guitarrista", "ch": 38, "ip": "10.30.30.12"},
+            {"name": "Vocalista",   "ch": 40, "ip": "10.30.30.13"},
+            {"name": "Tecladista",  "ch": 42, "ip": "10.30.30.14"}
         ]
     }
 }
@@ -273,7 +273,8 @@ def mesa_stream(cfg, stop_ev):
                         s, e = p * PACKET_FRAMES, (p + 1) * PACKET_FRAMES
                         pf = frames[s:e]
                         for m in musicians:
-                            st = pf[:, [m['ch_l'], m['ch_r']]]
+                            ch = m['ch']
+                            st = pf[:, [ch, ch]]
                             try:
                                 qs[m['ip']].put_nowait(st.tobytes())
                             except queue.Full:

@@ -85,8 +85,7 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
     Serial.printf("\nIP: %s\n", WiFi.localIP().toString().c_str());
 
-    // trigger = PACKET_BYTES: só acorda o receiver quando há 1 pacote completo
-    stream_buf = xStreamBufferCreate(BUF_SIZE, PACKET_BYTES);
+    stream_buf = xStreamBufferCreate(BUF_SIZE, BYTES_PER_FRAME);
 
     i2s_chan_config_t ch = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
     ch.dma_desc_num  = 6;
