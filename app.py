@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
     "mode": "radio",
     "radio": {
         "url": "http://a1rj.streams.com.br:7801/stream",
-        "esp32_ips": ["10.30.30.199"],
+        "esp32_ips": [{"ip": "10.30.30.199", "delay_ms": 0}],
         "aplay_dev": "plughw:1,0",
         "aplay_buf_ms": 25,
         "volume": 1.0,
@@ -25,11 +25,11 @@ DEFAULT_CONFIG = {
         "alsa_device": "hw:1,0",
         "total_channels": 64,
         "musicians": [
-            {"name": "Baterista",   "ch": 34, "ip": "10.30.30.10"},
-            {"name": "Baixista",    "ch": 36, "ip": "10.30.30.11"},
-            {"name": "Guitarrista", "ch": 38, "ip": "10.30.30.12"},
-            {"name": "Vocalista",   "ch": 40, "ip": "10.30.30.13"},
-            {"name": "Tecladista",  "ch": 42, "ip": "10.30.30.14"}
+            {"name": "Baterista",   "ch": 34, "ip": "10.30.30.10", "delay_ms": 0},
+            {"name": "Baixista",    "ch": 36, "ip": "10.30.30.11", "delay_ms": 0},
+            {"name": "Guitarrista", "ch": 38, "ip": "10.30.30.12", "delay_ms": 0},
+            {"name": "Vocalista",   "ch": 40, "ip": "10.30.30.13", "delay_ms": 0},
+            {"name": "Tecladista",  "ch": 42, "ip": "10.30.30.14", "delay_ms": 0}
         ]
     }
 }
@@ -61,13 +61,16 @@ def save_config(cfg):
     with open(CONFIG_FILE, 'w') as f:
         json.dump(cfg, f, indent=2, ensure_ascii=False)
 
+def get_ip(entry):
+    return entry['ip'] if isinstance(entry, dict) else entry
+
 # ── Ping ESP32s em background ─────────────────────────────────
 def ping_loop():
     while True:
         cfg = load_config()
         ips = set()
         if cfg['mode'] == 'radio':
-            ips = set(cfg['radio']['esp32_ips'])
+            ips = set(get_ip(e) for e in cfg['radio']['esp32_ips'])
         else:
             ips = set(m['ip'] for m in cfg['mesa']['musicians'])
         for ip in ips:
@@ -83,7 +86,7 @@ threading.Thread(target=ping_loop, daemon=True).start()
 
 # ── Auto-start ao ligar ───────────────────────────────────────
 def auto_start():
-    time.sleep(15)  # aguarda rede e serviços subirem
+    time.sleep(15)
     global streaming, stop_event, status
     if not streaming:
         cfg        = load_config()
@@ -98,20 +101,22 @@ threading.Thread(target=auto_start, daemon=True).start()
 
 # ── Modo Rádio ────────────────────────────────────────────────
 def radio_stream(cfg, stop_ev):
-    rc   = cfg['radio']
-    ips  = rc['esp32_ips']
-    dev  = rc['aplay_dev']
-    period = int(SAMPLE_RATE * 0.005)
-    buf    = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
+    rc       = cfg['radio']
+    ip_cfgs  = rc['esp32_ips']   # lista de {ip, delay_ms}
+    dev      = rc['aplay_dev']
+    period   = int(SAMPLE_RATE * 0.005)
+    buf      = int(SAMPLE_RATE * rc.get('aplay_buf_ms', 25) / 1000)
 
-    sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    pkt_q    = queue.Queue(maxsize=1000)
-    aplay_q  = queue.Queue(maxsize=400)
+    sock_udp  = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    pkt_q     = queue.Queue(maxsize=1000)
+    aplay_q   = queue.Queue(maxsize=400)
+    ip_queues = {get_ip(e): queue.Queue(maxsize=600) for e in ip_cfgs}
+    counts    = {get_ip(e): 0 for e in ip_cfgs}
 
-    for ip in ips:
+    for e in ip_cfgs:
+        ip = get_ip(e)
         if ip not in status:
-            status[ip] = {'name': ip, 'pkt_rate': 0,
-                          'pkts_total': 0, 'online': False}
+            status[ip] = {'name': ip, 'pkt_rate': 0, 'pkts_total': 0, 'online': False}
 
     def ffmpeg_reader():
         while not stop_ev.is_set():
@@ -167,11 +172,32 @@ def radio_stream(cfg, stop_ev):
             if not stop_ev.is_set():
                 time.sleep(0.5)
 
+    def ip_sender(entry):
+        ip    = get_ip(entry)
+        delay = (entry.get('delay_ms', 0) if isinstance(entry, dict) else 0) / 1000.0
+        q     = ip_queues[ip]
+        while not stop_ev.is_set():
+            try:
+                send_time, pkt = q.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            target = send_time + delay
+            wait   = target - time.monotonic()
+            if wait > 0.002:
+                time.sleep(wait - 0.002)
+            while time.monotonic() < target:
+                pass
+            try:
+                sock_udp.sendto(pkt, (ip, 9999))
+            except OSError:
+                pass
+
     threading.Thread(target=ffmpeg_reader, daemon=True).start()
     threading.Thread(target=aplay_worker,  daemon=True).start()
+    for e in ip_cfgs:
+        threading.Thread(target=ip_sender, args=(e,), daemon=True).start()
 
     next_send   = None
-    counts      = {ip: 0 for ip in ips}
     last_update = time.monotonic()
 
     while not stop_ev.is_set():
@@ -192,11 +218,13 @@ def radio_stream(cfg, stop_ev):
         if wait < -0.1:
             next_send = time.monotonic()
 
-        for ip in ips:
+        ts = time.monotonic()
+        for e in ip_cfgs:
+            ip = get_ip(e)
             try:
-                sock_udp.sendto(pkt, (ip, 9999))
+                ip_queues[ip].put_nowait((ts, pkt))
                 counts[ip] = counts.get(ip, 0) + 1
-            except OSError:
+            except queue.Full:
                 pass
 
         next_send += INTERVAL
@@ -208,7 +236,8 @@ def radio_stream(cfg, stop_ev):
 
         elapsed = time.monotonic() - last_update
         if elapsed >= 1.0:
-            for ip in ips:
+            for e in ip_cfgs:
+                ip = get_ip(e)
                 if ip not in status:
                     status[ip] = {'name': ip, 'pkts_total': 0, 'online': False}
                 status[ip]['pkt_rate']   = int(counts[ip] / elapsed)
@@ -225,9 +254,9 @@ def mesa_stream(cfg, stop_ev):
         print('ERRO: numpy não instalado. Execute: pip3 install numpy')
         return
 
-    mc       = cfg['mesa']
-    alsa_dev = mc['alsa_device']
-    total_ch = mc['total_channels']
+    mc        = cfg['mesa']
+    alsa_dev  = mc['alsa_device']
+    total_ch  = mc['total_channels']
     musicians = mc['musicians']
 
     PACKET_FRAMES = 240
@@ -265,13 +294,13 @@ def mesa_stream(cfg, stop_ev):
                     n_pkts = (len(leftover) // FRAME_BYTES) // PACKET_FRAMES
                     if n_pkts == 0:
                         continue
-                    use   = n_pkts * PACKET_FRAMES * FRAME_BYTES
-                    data  = leftover[:use]
+                    use      = n_pkts * PACKET_FRAMES * FRAME_BYTES
+                    data     = leftover[:use]
                     leftover = leftover[use:]
-                    frames = np.frombuffer(data, dtype=np.int16).reshape(-1, total_ch)
+                    frames   = np.frombuffer(data, dtype=np.int16).reshape(-1, total_ch)
                     for p in range(n_pkts):
                         s, e = p * PACKET_FRAMES, (p + 1) * PACKET_FRAMES
-                        pf = frames[s:e]
+                        pf   = frames[s:e]
                         for m in musicians:
                             ch = m['ch']
                             st = pf[:, [ch, ch]]
@@ -287,10 +316,11 @@ def mesa_stream(cfg, stop_ev):
                 time.sleep(3)
 
     def udp_sender(musician):
-        ip   = musician['ip']
-        q    = qs[ip]
-        next_send  = None
-        count      = 0
+        ip    = musician['ip']
+        delay = musician.get('delay_ms', 0) / 1000.0
+        q     = qs[ip]
+        next_send   = None
+        count       = 0
         last_update = time.monotonic()
 
         while not stop_ev.is_set():
@@ -302,7 +332,7 @@ def mesa_stream(cfg, stop_ev):
 
             now = time.monotonic()
             if next_send is None:
-                next_send = now
+                next_send = now + delay
             wait = next_send - now
             if wait > 0.002:
                 time.sleep(wait - 0.002)
@@ -311,8 +341,11 @@ def mesa_stream(cfg, stop_ev):
             if wait < -0.1:
                 next_send = time.monotonic()
 
-            sock_udp.sendto(pkt, (ip, 9999))
-            count += 1
+            try:
+                sock_udp.sendto(pkt, (ip, 9999))
+                count += 1
+            except OSError:
+                pass
             next_send += interval
 
             elapsed = time.monotonic() - last_update
