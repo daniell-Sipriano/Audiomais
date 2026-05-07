@@ -481,6 +481,9 @@ async function saveConfig() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(cfg)
   });
+  if (isStreaming && currentMode === 'radio') {
+    await fetch('/api/reload_radio', { method: 'POST' });
+  }
   toast('Configuração salva!');
 }
 
