@@ -81,6 +81,21 @@ def ping_loop():
 
 threading.Thread(target=ping_loop, daemon=True).start()
 
+# ── Auto-start ao ligar ───────────────────────────────────────
+def auto_start():
+    time.sleep(15)  # aguarda rede e serviços subirem
+    global streaming, stop_event, status
+    if not streaming:
+        cfg        = load_config()
+        status     = {}
+        stop_event = threading.Event()
+        target     = radio_stream if cfg['mode'] == 'radio' else mesa_stream
+        threading.Thread(target=target, args=(cfg, stop_event), daemon=True).start()
+        streaming  = True
+        print('Auto-start: streaming iniciado')
+
+threading.Thread(target=auto_start, daemon=True).start()
+
 # ── Modo Rádio ────────────────────────────────────────────────
 def radio_stream(cfg, stop_ev):
     rc   = cfg['radio']
