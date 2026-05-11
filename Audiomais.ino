@@ -42,9 +42,13 @@ void taskI2S(void *) {
 
         // Acumula até ter um pacote completo (960 bytes)
         size_t got = xStreamBufferReceive(stream_buf, buf + filled,
-                                          PACKET_BYTES - filled, pdMS_TO_TICKS(50));
+                                          PACKET_BYTES - filled, pdMS_TO_TICKS(250));
         if (got == 0) {
-            // 50ms sem dados → rebufferiza (sem reset: preserva o que chegou)
+            // 250ms sem dados → drena bytes parciais para realinhar e rebufferiza
+            if (filled > 0) {
+                uint8_t trash[PACKET_BYTES];
+                xStreamBufferReceive(stream_buf, trash, PACKET_BYTES - filled, 0);
+            }
             playing = false;
             filled  = 0;
             Serial.println("I2S: rebufferizando");
